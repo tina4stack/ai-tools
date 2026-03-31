@@ -1,6 +1,7 @@
 """HTTP server for mdview — serves rendered Markdown with live reload."""
 
 import json
+import os
 import signal
 import socket
 import sys
@@ -8,6 +9,7 @@ import threading
 import time
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -15,6 +17,10 @@ from .files import list_entries, read_file, validate_path
 from .viewer import build_html
 
 ASSETS_DIR = Path(__file__).parent / "assets"
+
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
 
 
 class MdViewHandler(BaseHTTPRequestHandler):
@@ -190,7 +196,7 @@ def main():
         print(f"Error: {target} does not exist", file=sys.stderr)
         sys.exit(1)
 
-    port = _find_free_port()
+    port = int(os.environ.get("PORT", 0)) or _find_free_port()
 
     # Create handler class with project context
     handler = type("Handler", (MdViewHandler,), {
@@ -198,7 +204,7 @@ def main():
         "initial_path": initial_path,
     })
 
-    server = HTTPServer(("127.0.0.1", port), handler)
+    server = ThreadingHTTPServer(("127.0.0.1", port), handler)
     url = f"http://127.0.0.1:{port}"
 
     print(f"mdview serving {project_root}")

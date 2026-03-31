@@ -45,30 +45,42 @@ def build_html(initial_path: str = "") -> str:
   var currentPath = null;
   var eventSource = null;
 
-  // Configure marked
+  // Configure marked with highlight.js renderer
+  var renderer = new marked.Renderer();
+  renderer.code = function(token) {{
+    var lang = (token.lang || '').trim();
+    var text = token.text || '';
+    var highlighted;
+    if (lang && hljs.getLanguage(lang)) {{
+      try {{ highlighted = hljs.highlight(text, {{language: lang}}).value; }}
+      catch(e) {{ highlighted = hljs.highlightAuto(text).value; }}
+    }} else {{
+      try {{ highlighted = hljs.highlightAuto(text).value; }}
+      catch(e) {{ highlighted = text; }}
+    }}
+    var langClass = lang ? ' class="language-' + lang + '"' : '';
+    return '<pre><code' + langClass + '>' + highlighted + '</code></pre>';
+  }};
+
   marked.setOptions({{
     gfm: true,
     breaks: false,
-    highlight: function(code, lang) {{
-      if (lang && hljs.getLanguage(lang)) {{
-        try {{ return hljs.highlight(code, {{language: lang}}).value; }}
-        catch(e) {{}}
-      }}
-      try {{ return hljs.highlightAuto(code).value; }}
-      catch(e) {{}}
-      return code;
-    }}
+    renderer: renderer
   }});
 
   // Fetch helper
   function api(url) {{
-    return fetch(url).then(function(r) {{ return r.json(); }});
+    return fetch(url).then(function(r) {{ return r.json(); }}).catch(function(err) {{
+      console.error('API error:', url, err);
+      return {{entries: [], error: err.message}};
+    }});
   }}
 
   // Load file tree
   function loadTree(path, container) {{
     api('/api/files?path=' + encodeURIComponent(path)).then(function(data) {{
       container.innerHTML = '';
+      if (!data.entries) return;
       data.entries.forEach(function(entry) {{
         var node = document.createElement('div');
         node.className = 'tree-node';
@@ -80,14 +92,14 @@ def build_html(initial_path: str = "") -> str:
         var icon = document.createElement('span');
         icon.className = 'tree-icon';
 
-        var name = document.createElement('span');
-        name.className = 'tree-name';
-        name.textContent = entry.name;
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'tree-name';
+        nameSpan.textContent = entry.name;
 
         if (entry.type === 'dir') {{
           icon.textContent = '\\u25B6';
           label.appendChild(icon);
-          label.appendChild(name);
+          label.appendChild(nameSpan);
 
           var badge = document.createElement('span');
           badge.style.cssText = 'margin-left:auto;font-size:11px;color:var(--text-muted)';
@@ -98,32 +110,39 @@ def build_html(initial_path: str = "") -> str:
           children.className = 'tree-children collapsed';
 
           var loaded = false;
-          label.onclick = function(e) {{
-            e.stopPropagation();
-            if (!loaded) {{
-              loadTree(entry.path, children);
-              loaded = true;
-            }}
-            children.classList.toggle('collapsed');
-            icon.textContent = children.classList.contains('collapsed') ? '\\u25B6' : '\\u25BC';
-          }};
+          (function(lbl, ico, ch, entryPath) {{
+            lbl.addEventListener('click', function(e) {{
+              e.stopPropagation();
+              e.preventDefault();
+              if (!loaded) {{
+                loadTree(entryPath, ch);
+                loaded = true;
+              }}
+              ch.classList.toggle('collapsed');
+              ico.textContent = ch.classList.contains('collapsed') ? '\\u25B6' : '\\u25BC';
+            }});
+          }})(label, icon, children, entry.path);
 
           node.appendChild(label);
           node.appendChild(children);
         }} else {{
-          icon.textContent = '\\u1F4C4';
-          icon.style.fontSize = '11px';
           icon.textContent = '#';
+          icon.style.cssText = 'font-size:11px;font-weight:bold;color:var(--primary)';
           label.appendChild(icon);
-          label.appendChild(name);
-          label.onclick = function(e) {{
-            e.stopPropagation();
-            document.querySelectorAll('.tree-label.active').forEach(function(l) {{
-              l.classList.remove('active');
+          label.appendChild(nameSpan);
+
+          (function(lbl, entryPath) {{
+            lbl.addEventListener('click', function(e) {{
+              e.stopPropagation();
+              e.preventDefault();
+              document.querySelectorAll('.tree-label.active').forEach(function(l) {{
+                l.classList.remove('active');
+              }});
+              lbl.classList.add('active');
+              loadFile(entryPath);
             }});
-            label.classList.add('active');
-            loadFile(entry.path);
-          }};
+          }})(label, entry.path);
+
           node.appendChild(label);
         }}
 
@@ -138,6 +157,8 @@ def build_html(initial_path: str = "") -> str:
     api('/api/content?path=' + encodeURIComponent(path)).then(function(data) {{
       if (data.error) {{
         document.getElementById('rendered').innerHTML = '<p style="color:var(--red)">' + data.error + '</p>';
+        document.getElementById('rendered').style.display = 'block';
+        document.getElementById('empty').style.display = 'none';
         return;
       }}
       document.getElementById('empty').style.display = 'none';
@@ -168,7 +189,7 @@ def build_html(initial_path: str = "") -> str:
       }});
 
       // Update page title
-      document.title = parts[parts.length - 1] + ' — mdview';
+      document.title = parts[parts.length - 1] + ' \\u2014 mdview';
 
       // Start watching for changes
       watchFile(path);

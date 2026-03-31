@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mdview",
+      "runtimeExecutable": ".venv/bin/python3",
+      "runtimeArgs": ["-c", "import os; os.environ['PORT']='8321'; import sys; sys.argv=['mdview','/Users/andrevanzuydam/IdeaProjects/tina4-python']; from tina4_ai.mdview.server import main; main()"],
+      "port": 8321
+    }
+  ]
+}
