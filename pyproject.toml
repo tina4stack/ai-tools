@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tina4-ai"
+version = "0.1.0"
+description = "AI tools for the Tina4 family"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    {name = "Andre van Zuydam"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.scripts]
+mdview = "tina4_ai.mdview.server:main"
+
+[tool.setuptools.packages.find]
+include = ["tina4_ai*"]
+
+[tool.setuptools.package-data]
+"tina4_ai.mdview" = ["assets/*"]
