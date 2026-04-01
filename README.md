@@ -36,14 +36,22 @@
 
 ## Install
 
+The recommended way — installs `mdview` as a standalone CLI tool:
+
 ```bash
-pip install tina4-ai
+uv tool install tina4-ai
 ```
 
-Or with [uv](https://docs.astral.sh/uv/) (recommended):
+Or with [pipx](https://pipx.pypa.io/):
 
 ```bash
-uv add tina4-ai
+pipx install tina4-ai
+```
+
+Or into a specific project/virtualenv:
+
+```bash
+pip install tina4-ai
 ```
 
 ---
@@ -71,7 +79,7 @@ mdview                            # Browse current directory
 ### Quick Start
 
 ```bash
-pip install tina4-ai
+uv tool install tina4-ai
 mdview README.md
 ```
 
