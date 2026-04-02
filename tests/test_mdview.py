@@ -128,3 +128,31 @@ class TestBuildHtml:
     def test_includes_initial_path(self):
         html = build_html("docs/README.md")
         assert "docs/README.md" in html
+
+    def test_includes_navigate_events_listener(self):
+        html = build_html()
+        assert "navigate-events" in html
+
+
+class TestSingleton:
+    def test_version_flag(self, capsys):
+        import sys
+        from unittest.mock import patch
+        with patch.object(sys, "argv", ["mdview", "--version"]):
+            from tina4_ai.mdview.server import main
+            main()
+        out = capsys.readouterr().out
+        assert "mdview" in out
+        assert "0." in out  # version number present
+
+    def test_lock_read_write_remove(self, tmp_path):
+        from tina4_ai.mdview import server as s
+        original = s.LOCK_FILE
+        s.LOCK_FILE = tmp_path / ".mdview.lock"
+        try:
+            s._write_lock(12345)
+            assert s.LOCK_FILE.read_text() == "12345"
+            s._remove_lock()
+            assert not s.LOCK_FILE.exists()
+        finally:
+            s.LOCK_FILE = original

@@ -223,6 +223,15 @@ def build_html(initial_path: str = "") -> str:
     }});
   }};
 
+  // Listen for remote navigate events (singleton reuse)
+  var navSource = new EventSource('/api/navigate-events');
+  navSource.onmessage = function(e) {{
+    try {{
+      var msg = JSON.parse(e.data);
+      if (msg.path) loadFile(msg.path);
+    }} catch(err) {{}}
+  }};
+
   // Initialize
   loadTree('.', document.getElementById('tree'));
 
